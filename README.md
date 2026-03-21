@@ -27,6 +27,12 @@ Para abrir o programa, basta dar um duplo-clique no arquivo `.jar` baixado, ou v
 java -jar PS3-ISO-Decryptor.jar
 ```
 
+> **⚠️ Nota para usuários do Mac:**
+> Por conta das políticas de segurança da Apple (Gatekeeper), ao baixar o `.jar` pelo navegador, o Mac pode exibir um aviso dizendo que "A Apple não pôde verificar se o item está livre de algum malware". \
+> **Como resolver rapidamente**:
+> - Abra **Ajustes do Sistema > Privacidade e Segurança**. Role para baixo e clique em **Abrir Mesmo Assim** ao lado do aviso do nosso `.jar`. \
+> - **OU via terminal:** Rode `xattr -cr /caminho/para/o/PS3-ISO-Decryptor.jar` para remover a quarentena do arquivo.
+
 ## 💻 Como Compilar e Rodar (Para Desenvolvedores)
 
 1. **Baixar o código**
