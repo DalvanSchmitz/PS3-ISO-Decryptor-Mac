@@ -15,7 +15,9 @@ import com.ps3dec.util.Theme;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.net.URI;
 import java.text.MessageFormat;
+import com.ps3dec.util.OSUtils;
 
 /**
  * Panel for the Single ISO conversion tab.
@@ -29,7 +31,7 @@ public class SingleTabPanel extends JPanel {
 
     private JLabel labelIso, labelDkey, labelDest, searchStatusLabel;
     private JTextField isoField, dkeyField, outputField;
-    private JButton btnGameId, btnSearchDkey, btnConvert;
+    private JButton btnGameId, btnSearchDkey, btnConvert, btnSiteDkey;
 
     public SingleTabPanel(JFrame parent, LogPanel logPanel) {
         this.parent = parent;
@@ -130,12 +132,14 @@ public class SingleTabPanel extends JPanel {
             if (id.isEmpty()) {
                 JOptionPane.showMessageDialog(parent, I18n.get("status.gameid_not_found"));
             } else {
-                JOptionPane.showMessageDialog(parent, "Game ID: " + id);
+                UIUtils.showCopyDialog(parent, I18n.get("gameid.dialog_title"), id);
             }
         });
+        btnSiteDkey = UIFactory.createActionButton(I18n.get("btn.site_dkey"), Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> openWebsite());
         btnSearchDkey = UIFactory.createActionButton(I18n.get("btn.search_dkey"), new Color(200, 220, 255), new Color(50, 70, 120), e -> searchDkeyOnline());
         btnConvert = UIFactory.createActionButton(I18n.get("btn.convert_iso"), Color.WHITE, Theme.ACCENT, e -> runSingleDecrypt());
 
+        buttonBar.add(btnSiteDkey);
         buttonBar.add(btnGameId);
         buttonBar.add(btnSearchDkey);
         buttonBar.add(btnConvert);
@@ -207,7 +211,7 @@ public class SingleTabPanel extends JPanel {
             return;
         }
 
-        String ps3decBin = UIUtils.getPS3DecBinPath();
+        String ps3decBin = OSUtils.getPs3decPath();
         String isoName = new File(isoPath).getName();
         String stemName = isoName.contains(".") ? isoName.substring(0, isoName.lastIndexOf('.')) : isoName;
         String outputFileName = stemName + "_decrypted.iso";
@@ -242,6 +246,14 @@ public class SingleTabPanel extends JPanel {
         progress.setVisible(true);
     }
 
+    private void openWebsite() {
+        try {
+            Desktop.getDesktop().browse(new URI("https://ps3.aldostools.org/ird.html"));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(parent, I18n.get("error.open_browser"));
+        }
+    }
+
     private void setSearchStatus(String text, Color color) {
         searchStatusLabel.setText(text);
         searchStatusLabel.setForeground(color);
@@ -252,6 +264,7 @@ public class SingleTabPanel extends JPanel {
         if (labelDkey != null) labelDkey.setText(I18n.get("label.dkey"));
         if (labelDest != null) labelDest.setText(I18n.get("label.dest_folder"));
         if (btnGameId != null) btnGameId.setText(I18n.get("label.game_id"));
+        if (btnSiteDkey != null) btnSiteDkey.setText(I18n.get("btn.site_dkey"));
         if (btnSearchDkey != null) btnSearchDkey.setText(I18n.get("btn.search_dkey"));
         if (btnConvert != null) btnConvert.setText(I18n.get("btn.convert_iso"));
 

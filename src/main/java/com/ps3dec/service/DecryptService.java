@@ -1,11 +1,14 @@
 package com.ps3dec.service;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
-import java.io.File;
-import java.util.function.Consumer;
+import com.ps3dec.util.I18n;
 
 public class DecryptService {
 
@@ -52,10 +55,10 @@ public class DecryptService {
                 int pct = (int) progress;
                 double pctDisplay = pct / 10.0;
 
-                String statusMsg = "Quase lá...";
-                if (pctDisplay < 20) statusMsg = "Lendo setores...";
-                else if (pctDisplay < 50) statusMsg = "Descriptografando...";
-                else if (pctDisplay < 75) statusMsg = "Escrevendo dados...";
+                String statusMsg = I18n.get("decrypt.status.almost_there");
+                if (pctDisplay < 20) statusMsg = I18n.get("decrypt.status.reading");
+                else if (pctDisplay < 50) statusMsg = I18n.get("decrypt.status.decrypting");
+                else if (pctDisplay < 75) statusMsg = I18n.get("decrypt.status.writing");
 
                 listener.onProgress(pct, statusMsg, timeStr);
             }
@@ -64,9 +67,18 @@ public class DecryptService {
         worker = new SwingWorker<Integer, Void>() {
             @Override
             protected Integer doInBackground() throws Exception {
+                // Determine if dkeyHex is a file or a raw string
+                String finalDkeyHex = dkeyHex;
+                File dkeyFile = new File(dkeyHex);
+                if (dkeyFile.exists() && dkeyFile.isFile()) {
+                    try (BufferedReader br = new BufferedReader(new java.io.FileReader(dkeyFile))) {
+                        finalDkeyHex = br.readLine().trim();
+                    } catch (Exception ignored) {}
+                }
+
                 ProcessBuilder pb = new ProcessBuilder(
                         ps3decBin, isoPath,
-                        "--dk", dkeyHex,
+                        "--dk", finalDkeyHex,
                         "--output-dir", outputDir,
                         "--skip");
                 pb.redirectErrorStream(true);
@@ -123,15 +135,31 @@ public class DecryptService {
         startDecryption(ps3decBin, isoPath, dkeyHex, outputDir, outputFileName, listener, null);
     }
 
-    public String extractGameIdFromFileName(String fileName) {
-        if (fileName == null) return "";
-        // Simple regex-like extraction: looks for 4 letters + 5 numbers
-        // e.g. BLUS30109, BCUS98174
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("([A-Z]{4})[- ]?([0-9]{5})");
-        java.util.regex.Matcher m = p.matcher(fileName.toUpperCase());
-        if (m.find()) {
-            return m.group(1) + m.group(2);
+    public String extractGameIdFromFileName(String filePath) {
+        if (filePath == null || filePath.isEmpty()) return "";
+        
+        File f = new File(filePath);
+        if (!f.exists()) return "";
+
+        java.util.regex.Pattern idPat = java.util.regex.Pattern.compile("([A-Z]{4})[- ]?(\\d{5})");
+
+        // 1. Check filename
+        java.util.regex.Matcher m = idPat.matcher(f.getName().toUpperCase());
+        if (m.find()) return m.group(1) + m.group(2);
+
+        // 2. Scan internal ISO bytes (first 2MB)
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] buffer = new byte[2 * 1024 * 1024];
+            int read = fis.read(buffer);
+            if (read > 0) {
+                String content = new String(buffer, 0, read, StandardCharsets.US_ASCII);
+                m = idPat.matcher(content);
+                if (m.find()) return m.group(1) + m.group(2);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
         return "";
     }
 

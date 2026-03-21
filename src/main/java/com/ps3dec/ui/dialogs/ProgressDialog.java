@@ -58,7 +58,8 @@ public class ProgressDialog extends JDialog {
                 BorderFactory.createLineBorder(Theme.BORDER_COLOR, 1, true),
                 BorderFactory.createEmptyBorder(2, 2, 2, 2)));
         progressBar.setPreferredSize(new Dimension(480, 30));
-        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        progressBar.setMaximumSize(new Dimension(Short.MAX_VALUE, 30));
+        progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(progressBar);
 
         centerPanel.add(Box.createVerticalStrut(14));

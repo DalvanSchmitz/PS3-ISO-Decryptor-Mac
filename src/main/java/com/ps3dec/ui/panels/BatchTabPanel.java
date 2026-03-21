@@ -12,6 +12,7 @@ import com.ps3dec.ui.util.UIUtils;
 import com.ps3dec.util.AppPreferences;
 import com.ps3dec.util.I18n;
 import com.ps3dec.util.Theme;
+import com.ps3dec.util.OSUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -241,7 +242,7 @@ public class BatchTabPanel extends JPanel {
                     item.setStatus("ONLINE_SEARCH");
                     publish(item);
 
-                    String titleId = decryptService.extractGameIdFromFileName(item.getIsoFile().getName());
+                    String titleId = decryptService.extractGameIdFromFileName(item.getIsoFile().getAbsolutePath());
                     if (titleId.isEmpty()) {
                         item.setStatus("NOT_FOUND");
                         publish(item);
@@ -307,7 +308,7 @@ public class BatchTabPanel extends JPanel {
         item.setStatus("DECRYPTING");
         batchTableModel.fireTableDataChanged();
 
-        String ps3decBin = UIUtils.getPS3DecBinPath();
+        String ps3decBin = OSUtils.getPs3decPath();
         String isoPath = item.getIsoFile().getAbsolutePath();
         String dkey = item.getKeyFile().getAbsolutePath();
         String isoName = item.getIsoFile().getName();

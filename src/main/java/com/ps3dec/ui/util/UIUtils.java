@@ -4,6 +4,9 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
+import com.ps3dec.util.Theme;
+import com.ps3dec.util.I18n;
+import com.ps3dec.ui.components.UIFactory;
 
 /**
  * Shared UI utility methods for dialogs and choosers.
@@ -62,5 +65,32 @@ public class UIUtils {
             return binFile.getAbsolutePath();
 
         return binName; // Fallback to PATH
+    }
+
+    public static void showCopyDialog(Window parent, String title, String value) {
+        JDialog dialog = new JDialog(parent, title, Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setSize(380, 160);
+        dialog.getContentPane().setBackground(Theme.BG_DARK);
+        dialog.setLayout(new BorderLayout(0, 12));
+        ((JPanel) dialog.getContentPane()).setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+
+        JTextField field = UIFactory.createTextField("");
+        field.setText(value);
+        field.setEditable(false);
+        field.setHorizontalAlignment(JTextField.CENTER);
+        field.setFont(new Font("Monospaced", Font.BOLD, 18));
+        dialog.add(field, BorderLayout.CENTER);
+
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        panel.setOpaque(false);
+        panel.add(UIFactory.createActionButton(I18n.get("btn.copy"), Color.WHITE, Theme.ACCENT, e -> {
+            java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(value);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+        }));
+        panel.add(UIFactory.createActionButton(I18n.get("btn.close"), Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> dialog.dispose()));
+
+        dialog.add(panel, BorderLayout.SOUTH);
+        dialog.setLocationRelativeTo(parent);
+        dialog.setVisible(true);
     }
 }
