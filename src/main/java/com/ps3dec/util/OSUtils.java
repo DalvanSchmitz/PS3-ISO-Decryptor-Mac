@@ -50,11 +50,40 @@ public class OSUtils {
             }
         } catch (Exception ignored) {}
 
-        // 3. Last resort: just return local name and let it fail with a clear msg
+        // 3. Last resort: Try extracting from JAR resources
+        try {
+            File tempBin = extractResource(binName);
+            if (tempBin != null && tempBin.exists() && tempBin.canExecute()) {
+                return tempBin.getAbsolutePath();
+            }
+        } catch (Exception ignored) {}
+
+        // 4. Fallback to user.dir (legacy)
         String local = new File(System.getProperty("user.dir"), binName).getAbsolutePath();
         if (!new File(local).exists()) {
-            System.err.println("CRITICAL: Binary " + binName + " not found in search paths!");
+            System.err.println("CRITICAL: Binary " + binName + " not found in search paths or resources!");
         }
         return local;
+    }
+
+    private static File extractResource(String name) {
+        try {
+            java.io.InputStream is = OSUtils.class.getResourceAsStream("/" + name);
+            if (is == null) return null;
+
+            File targetDir = new File(System.getProperty("user.home"), ".ps3dec/bin");
+            if (!targetDir.exists()) targetDir.mkdirs();
+
+            File targetFile = new File(targetDir, name);
+            
+            // Only extract if not exists or different size (optional improvement)
+            java.nio.file.Files.copy(is, targetFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            targetFile.setExecutable(true);
+            
+            return targetFile;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
