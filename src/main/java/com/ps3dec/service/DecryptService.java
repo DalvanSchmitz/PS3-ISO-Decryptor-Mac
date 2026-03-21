@@ -123,6 +123,18 @@ public class DecryptService {
         startDecryption(ps3decBin, isoPath, dkeyHex, outputDir, outputFileName, listener, null);
     }
 
+    public String extractGameIdFromFileName(String fileName) {
+        if (fileName == null) return "";
+        // Simple regex-like extraction: looks for 4 letters + 5 numbers
+        // e.g. BLUS30109, BCUS98174
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("([A-Z]{4})[- ]?([0-9]{5})");
+        java.util.regex.Matcher m = p.matcher(fileName.toUpperCase());
+        if (m.find()) {
+            return m.group(1) + m.group(2);
+        }
+        return "";
+    }
+
     public void cancel() {
         cancelled = true;
         if (animationTimer != null) animationTimer.stop();
