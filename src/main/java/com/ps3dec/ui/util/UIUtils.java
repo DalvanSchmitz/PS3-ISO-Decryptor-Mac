@@ -1,7 +1,5 @@
 package com.ps3dec.ui.util;
 
-import com.ps3dec.util.Theme;
-
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -26,7 +24,8 @@ public class UIUtils {
         return showFileChooser(parent, title, initialDir, null);
     }
 
-    public static File showFileChooser(Component parent, String title, String initialDir, String description, String... extensions) {
+    public static File showFileChooser(Component parent, String title, String initialDir, String description,
+            String... extensions) {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle(title);
         if (initialDir != null && !initialDir.isEmpty()) {
@@ -42,7 +41,8 @@ public class UIUtils {
     }
 
     public static void setPlaceholder(JTextField field, String placeholder) {
-        if (field == null) return;
+        if (field == null)
+            return;
         field.putClientProperty("placeholder", placeholder);
         field.repaint();
     }
@@ -50,15 +50,17 @@ public class UIUtils {
     public static String getPS3DecBinPath() {
         String os = System.getProperty("os.name").toLowerCase();
         String binName = os.contains("win") ? "ps3dec.exe" : "ps3dec";
-        
+
         // Try relative to project root
         File binFile = new File("bin/" + binName);
-        if (binFile.exists()) return binFile.getAbsolutePath();
-        
+        if (binFile.exists())
+            return binFile.getAbsolutePath();
+
         // Try user.dir
         binFile = new File(System.getProperty("user.dir") + "/bin/" + binName);
-        if (binFile.exists()) return binFile.getAbsolutePath();
-        
+        if (binFile.exists())
+            return binFile.getAbsolutePath();
+
         return binName; // Fallback to PATH
     }
 }

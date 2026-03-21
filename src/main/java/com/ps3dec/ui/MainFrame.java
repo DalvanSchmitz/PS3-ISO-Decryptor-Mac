@@ -1,6 +1,5 @@
 package com.ps3dec.ui;
 
-import com.ps3dec.ui.components.UIFactory;
 import com.ps3dec.ui.managers.TrayManager;
 import com.ps3dec.ui.panels.BatchTabPanel;
 import com.ps3dec.ui.panels.LogPanel;
@@ -16,7 +15,8 @@ import java.awt.event.MouseEvent;
 
 /**
  * Main application window.
- * Acts as a container for modular panels (SingleTabPanel, BatchTabPanel, LogPanel).
+ * Acts as a container for modular panels (SingleTabPanel, BatchTabPanel,
+ * LogPanel).
  */
 public class MainFrame extends JFrame {
 
@@ -38,9 +38,9 @@ public class MainFrame extends JFrame {
         setMinimumSize(new Dimension(800, 600));
         setLocationRelativeTo(null);
         getContentPane().setBackground(Theme.BG_DARK);
-        
+
         initUI();
-        
+
         // Setup tray manager
         trayManager = new TrayManager(this);
         trayManager.setup();
@@ -89,7 +89,7 @@ public class MainFrame extends JFrame {
         // Left Section: Logo + Title
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         left.setOpaque(false);
-        
+
         try {
             JLabel logo = new JLabel(new ImageIcon(getClass().getResource("/assets/AppIcon.png")));
             left.add(logo);
@@ -97,7 +97,7 @@ public class MainFrame extends JFrame {
         } catch (Exception e) {
             // Fallback if icon is missing
         }
-        
+
         titleLabel = new JLabel("PS3 ISO Decryptor");
         titleLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
@@ -112,11 +112,19 @@ public class MainFrame extends JFrame {
         settingsBtn.setToolTipText("Language / Idioma");
         settingsBtn.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) { showLanguageMenu(settingsBtn); }
+            public void mouseClicked(MouseEvent e) {
+                showLanguageMenu(settingsBtn);
+            }
+
             @Override
-            public void mouseEntered(MouseEvent e) { settingsBtn.setForeground(Color.WHITE); }
+            public void mouseEntered(MouseEvent e) {
+                settingsBtn.setForeground(Color.WHITE);
+            }
+
             @Override
-            public void mouseExited(MouseEvent e) { settingsBtn.setForeground(Theme.TEXT_SECONDARY); }
+            public void mouseExited(MouseEvent e) {
+                settingsBtn.setForeground(Theme.TEXT_SECONDARY);
+            }
         });
         header.add(settingsBtn, BorderLayout.EAST);
 
@@ -197,7 +205,7 @@ public class MainFrame extends JFrame {
                 BorderFactory.createEmptyBorder(4, 0, 4, 0)));
 
         menu.add(createLangMenuItem("Portugu\u00EAs (BR)", e -> setLanguage(new java.util.Locale("pt", "BR"))));
-        menu.add(createLangMenuItem("English (US)",      e -> setLanguage(java.util.Locale.ENGLISH)));
+        menu.add(createLangMenuItem("English (US)", e -> setLanguage(java.util.Locale.ENGLISH)));
         menu.show(invoker, 0, invoker.getHeight());
     }
 
@@ -213,10 +221,12 @@ public class MainFrame extends JFrame {
         item.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
         item.addActionListener(action);
-        
+
         item.addChangeListener(e -> {
-            if (item.getModel().isArmed()) item.setBackground(Theme.BG_FIELD);
-            else item.setBackground(Theme.BG_PANEL);
+            if (item.getModel().isArmed())
+                item.setBackground(Theme.BG_FIELD);
+            else
+                item.setBackground(Theme.BG_PANEL);
         });
         return item;
     }
@@ -232,13 +242,19 @@ public class MainFrame extends JFrame {
      * Propagates localization update calls to all sub-components.
      */
     private void updateLocalizedText() {
-        if (btnSingle != null) btnSingle.setText(I18n.get("tab.single"));
-        if (btnBatch != null) btnBatch.setText(I18n.get("tab.batch"));
+        if (btnSingle != null)
+            btnSingle.setText(I18n.get("tab.single"));
+        if (btnBatch != null)
+            btnBatch.setText(I18n.get("tab.batch"));
 
-        if (singleTabPanel != null) singleTabPanel.updateLocalizedText();
-        if (batchTabPanel != null) batchTabPanel.updateLocalizedText();
-        if (logPanel != null) logPanel.updateLocalizedText();
-        if (trayManager != null) trayManager.updateLocalizedText();
+        if (singleTabPanel != null)
+            singleTabPanel.updateLocalizedText();
+        if (batchTabPanel != null)
+            batchTabPanel.updateLocalizedText();
+        if (logPanel != null)
+            logPanel.updateLocalizedText();
+        if (trayManager != null)
+            trayManager.updateLocalizedText();
 
         revalidate();
         repaint();
