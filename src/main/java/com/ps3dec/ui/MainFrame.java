@@ -24,10 +24,12 @@ import java.io.FileReader;
 import java.io.FileInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.SwingWorker;
 import com.ps3dec.util.AppPreferences;
+import com.ps3dec.util.I18n;
 
 public class MainFrame extends JFrame {
 
@@ -37,6 +39,15 @@ public class MainFrame extends JFrame {
     private JTextField outputField;
     private DecryptService decryptService;
     private final DkeySearchService dkeySearchService = new DkeySearchService();
+
+    // UI elements that need localized updates
+    private JButton btnSingle;   // instance field — assigned in initUI(), NOT re-declared there
+    private JButton btnBatch;    // same
+    private JButton btnShowLogs; // log-toggle button
+    private JButton siteBtn;
+    private JLabel labelIso, labelKey, labelDest, labelBatchFolder, labelBatchDest;
+    private JButton btnGameId, btnSearchDkey, btnConvert, btnStartBatch;
+    private JTextField folderField;
     /** Status label shown below the button bar in single view */
     private JLabel searchStatusLabel;
 
@@ -49,12 +60,12 @@ public class MainFrame extends JFrame {
     private CardLayout cardLayout;
     private JPanel cardsPanel;
 
-    // --- Log console (Feature 5) ---
+    // --- Log console ---
     private JTextArea logArea;
     private JPanel logPanel;
     private boolean logsVisible = false;
 
-    // --- System Tray (Feature 4) ---
+    // --- System Tray ---
     private TrayIcon trayIcon;
 
     public MainFrame() {
@@ -76,7 +87,6 @@ public class MainFrame extends JFrame {
             if (iconUrl != null) {
                 icon = Toolkit.getDefaultToolkit().getImage(iconUrl);
             } else {
-                // Fallback: plain coloured square
                 BufferedImage fallback = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D fg = fallback.createGraphics();
                 fg.setColor(new Color(88, 101, 242));
@@ -92,7 +102,6 @@ public class MainFrame extends JFrame {
     }
 
     private void notifyTray(String title, String message) {
-        // On macOS, use osascript for proper Notification Center integration
         if (System.getProperty("os.name", "").toLowerCase().contains("mac")) {
             try {
                 String safeMsg = message.replace("\"", "'");
@@ -104,7 +113,6 @@ public class MainFrame extends JFrame {
                 return;
             } catch (Exception ignored) { }
         }
-        // Fallback: AWT SystemTray (Windows/Linux)
         if (trayIcon != null) {
             trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);
         }
@@ -121,16 +129,27 @@ public class MainFrame extends JFrame {
         header.setOpaque(false);
         header.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
 
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.setOpaque(false);
+
         JLabel titleLabel = new JLabel("PS3 ISO Decryptor", SwingConstants.CENTER);
         titleLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 22));
         titleLabel.setForeground(Theme.TEXT_PRIMARY);
-        header.add(titleLabel, BorderLayout.NORTH);
+        topRow.add(titleLabel, BorderLayout.CENTER);
 
-        // Tab toggle buttons
+        JButton settingsBtn = UIFactory.createActionButton(
+                "\u2699", Theme.TEXT_SECONDARY, new Color(55, 57, 72),
+                e -> showLanguageMenu((JButton) e.getSource()));
+        settingsBtn.setPreferredSize(new Dimension(40, 40));
+        topRow.add(settingsBtn, BorderLayout.EAST);
+
+        header.add(topRow, BorderLayout.NORTH);
+
+        // Tab toggle buttons — assign to INSTANCE FIELDS (no 'JButton' keyword here)
         JPanel tabButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         tabButtons.setOpaque(false);
-        JButton btnSingle = UIFactory.createActionButton("Única", Color.WHITE, Theme.ACCENT, null);
-        JButton btnBatch  = UIFactory.createActionButton("Em Lote", Theme.TEXT_SECONDARY, new Color(55, 57, 72), null);
+        btnSingle = UIFactory.createActionButton(I18n.get("tab.single"), Color.WHITE, Theme.ACCENT, null);
+        btnBatch  = UIFactory.createActionButton(I18n.get("tab.batch"), Theme.TEXT_SECONDARY, new Color(55, 57, 72), null);
         tabButtons.add(btnSingle);
         tabButtons.add(btnBatch);
         header.add(tabButtons, BorderLayout.CENTER);
@@ -148,15 +167,15 @@ public class MainFrame extends JFrame {
         JPanel southWrapper = new JPanel(new BorderLayout(0, 8));
         southWrapper.setOpaque(false);
 
-        // Use array wrapper so the lambda can reference the button before it is fully assigned
-        final JButton[] logToggleRef = new JButton[1];
-        logToggleRef[0] = UIFactory.createActionButton("▾ Mostrar Logs", Theme.TEXT_SECONDARY,
-                new Color(40, 42, 54), e -> toggleLogs(logToggleRef[0]));
-        logToggleRef[0].setPreferredSize(new Dimension(160, 32));
+        // Assign log-toggle button to instance field so updateLocalizedText() can reach it
+        btnShowLogs = UIFactory.createActionButton(
+                I18n.get("btn.show_logs"), Theme.TEXT_SECONDARY, new Color(40, 42, 54),
+                e -> toggleLogs());
+        btnShowLogs.setPreferredSize(new Dimension(160, 32));
         JPanel logToggleRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         logToggleRow.setOpaque(false);
         logToggleRow.setBorder(BorderFactory.createEmptyBorder(14, 0, 0, 0));
-        logToggleRow.add(logToggleRef[0]);
+        logToggleRow.add(btnShowLogs);
         southWrapper.add(logToggleRow, BorderLayout.NORTH);
 
         logArea = new JTextArea(8, 60);
@@ -200,11 +219,108 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    private void toggleLogs(JButton toggleBtn) {
+    private void toggleLogs() {
         logsVisible = !logsVisible;
         logPanel.setVisible(logsVisible);
-        toggleBtn.setText(logsVisible ? "▴ Ocultar Logs" : "▾ Mostrar Logs");
+        updateLogToggleButton();
         pack();
+    }
+
+    private void updateLogToggleButton() {
+        if (btnShowLogs != null) {
+            btnShowLogs.setText(logsVisible ? I18n.get("btn.hide_logs") : I18n.get("btn.show_logs"));
+        }
+    }
+
+    private void showLanguageMenu(Component invoker) {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBackground(new Color(40, 42, 58));
+        menu.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Theme.BORDER_COLOR, 1),
+                BorderFactory.createEmptyBorder(4, 0, 4, 0)));
+
+        menu.add(createLangMenuItem("Portugu\u00EAs (BR)", e -> setLanguage(new java.util.Locale("pt", "BR"))));
+        menu.add(createLangMenuItem("English (US)",      e -> setLanguage(java.util.Locale.ENGLISH)));
+        menu.show(invoker, 0, invoker.getHeight());
+    }
+
+    private JMenuItem createLangMenuItem(String label, java.awt.event.ActionListener action) {
+        JMenuItem item = new JMenuItem(label);
+        // Remove native OS styling (which causes the bright green bug on macOS)
+        item.setUI(new javax.swing.plaf.basic.BasicMenuItemUI());
+        
+        item.setFont(new Font(Font.DIALOG, Font.BOLD, 13));
+        item.setForeground(Theme.TEXT_PRIMARY);
+        item.setBackground(Theme.BG_PANEL);
+        item.setOpaque(true);
+        item.setBorderPainted(false);
+        item.setPreferredSize(new Dimension(160, 36));
+        item.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        item.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        item.addActionListener(action);
+        
+        // Custom hover effect
+        item.addChangeListener(e -> {
+            if (item.getModel().isArmed()) {
+                item.setBackground(Theme.BG_FIELD);
+            } else {
+                item.setBackground(Theme.BG_PANEL);
+            }
+        });
+        
+        return item;
+    }
+
+    private void setLanguage(java.util.Locale locale) {
+        java.util.Locale.setDefault(locale);
+        I18n.loadBundle(locale);
+        AppPreferences.setLanguage(locale.toLanguageTag()); // persist choice
+        updateLocalizedText();
+    }
+
+    /** Updates the stored placeholder string in a field so it repaints with the new text. */
+    private static void setPlaceholder(JTextField field, String text) {
+        if (field == null) return;
+        field.putClientProperty("placeholder", text);
+        field.setToolTipText(text); // update tooltip as well
+        field.repaint();
+    }
+
+    private void updateLocalizedText() {
+        // Tabs
+        if (btnSingle != null) btnSingle.setText(I18n.get("tab.single"));
+        if (btnBatch  != null) btnBatch.setText(I18n.get("tab.batch"));
+
+        // Single view labels
+        if (labelIso  != null) labelIso.setText(I18n.get("label.iso_file"));
+        if (labelKey  != null) labelKey.setText(I18n.get("label.dkey"));
+        if (labelDest != null) labelDest.setText(I18n.get("label.dest_folder"));
+
+        // Single view placeholders (updates both tooltip AND painted placeholder)
+        setPlaceholder(isoField,    I18n.get("placeholder.iso"));
+        setPlaceholder(dkeyField,   I18n.get("placeholder.dkey"));
+        setPlaceholder(outputField, I18n.get("placeholder.dest"));
+        setPlaceholder(folderField, I18n.get("placeholder.batch"));
+        if (batchOutputField != null) setPlaceholder(batchOutputField, I18n.get("placeholder.dest"));
+
+        // Single view buttons
+        if (btnGameId    != null) btnGameId.setText(I18n.get("label.game_id"));
+        if (btnSearchDkey!= null) btnSearchDkey.setText(I18n.get("btn.search_dkey"));
+        if (btnConvert   != null) btnConvert.setText(I18n.get("btn.convert_iso"));
+
+        // Batch view
+        if (labelBatchFolder != null) labelBatchFolder.setText(I18n.get("label.batch_folder"));
+        if (labelBatchDest   != null) labelBatchDest.setText(I18n.get("label.dest_folder"));
+        if (btnStartBatch    != null) btnStartBatch.setText(I18n.get("btn.start_batch"));
+
+        // Batch table columns
+        if (batchTableModel != null) batchTableModel.fireTableStructureChanged();
+
+        // Log toggle button
+        updateLogToggleButton();
+
+        revalidate();
+        repaint();
     }
 
     private void appendLog(String line) {
@@ -225,11 +341,12 @@ public class MainFrame extends JFrame {
 
         // ISO row
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
-        card.add(UIFactory.createLabel("Arquivo ISO"), gbc);
+        labelIso = UIFactory.createLabel(I18n.get("label.iso_file"));
+        card.add(labelIso, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        isoField = UIFactory.createTextField("Selecione ou arraste o .iso aqui");
-        enableFileDrop(isoField, true);  // isIso=true → salva em lastIsoPath
+        isoField = UIFactory.createTextField(I18n.get("placeholder.iso"));
+        enableFileDrop(isoField, true);
         card.add(isoField, gbc);
 
         gbc.gridx = 2; gbc.weightx = 0;
@@ -237,18 +354,18 @@ public class MainFrame extends JFrame {
 
         // DKEY row
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
-        card.add(UIFactory.createLabel("Chave"), gbc);
+        labelKey = UIFactory.createLabel(I18n.get("label.dkey"));
+        card.add(labelKey, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        dkeyField = UIFactory.createTextField("Arraste ou selecione o .dkey / .key");
+        dkeyField = UIFactory.createTextField(I18n.get("placeholder.dkey"));
         enableFileDrop(dkeyField, false);
         card.add(dkeyField, gbc);
 
         gbc.gridx = 2; gbc.weightx = 0;
         card.add(UIFactory.createBrowseButton(e -> chooseDkey()), gbc);
 
-        // Output row
-        // Load saved preferences
+        // Output row — load saved preferences
         String savedIso = AppPreferences.getLastIsoPath();
         if (!savedIso.isEmpty() && new File(savedIso).exists()) isoField.setText(savedIso);
 
@@ -256,15 +373,15 @@ public class MainFrame extends JFrame {
         if (!savedDkey.isEmpty()) {
             dkeyField.setText(savedDkey);
         } else if (!savedIso.isEmpty() && new File(savedIso).exists()) {
-            // Se tem ISO mas não tem chave, busca online no startup
             javax.swing.SwingUtilities.invokeLater(this::searchDkeyOnline);
         }
 
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
-        card.add(UIFactory.createLabel("Destino"), gbc);
+        labelDest = UIFactory.createLabel(I18n.get("label.dest_folder"));
+        card.add(labelDest, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        outputField = UIFactory.createTextField("Pasta de saída");
+        outputField = UIFactory.createTextField(I18n.get("placeholder.dest"));
         outputField.setText(AppPreferences.getOutputDir());
         card.add(outputField, gbc);
 
@@ -273,16 +390,21 @@ public class MainFrame extends JFrame {
 
         panel.add(card, BorderLayout.CENTER);
 
-        // --- Bottom area: button bar + search status ---
+        // Bottom: button bar + search status
         JPanel southArea = new JPanel(new BorderLayout(0, 6));
         southArea.setOpaque(false);
 
         JPanel buttonBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttonBar.setOpaque(false);
-        buttonBar.add(UIFactory.createActionButton("Site DKEY", Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> openWebsite()));
-        buttonBar.add(UIFactory.createActionButton("ID do Jogo", Theme.TEXT_PRIMARY, new Color(65, 67, 85), e -> extractGameID()));
-        buttonBar.add(UIFactory.createActionButton("🔍 Buscar Chave", new Color(200, 220, 255), new Color(50, 70, 120), e -> searchDkeyOnline()));
-        buttonBar.add(UIFactory.createActionButton("Converter ISO", Color.WHITE, Theme.ACCENT, e -> runDecrypt()));
+        siteBtn      = UIFactory.createActionButton("Site DKEY", Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> openWebsite());
+        btnGameId    = UIFactory.createActionButton(I18n.get("label.game_id"), Theme.TEXT_PRIMARY, new Color(65, 67, 85), e -> extractGameID());
+        btnSearchDkey= UIFactory.createActionButton(I18n.get("btn.search_dkey"), new Color(200, 220, 255), new Color(50, 70, 120), e -> searchDkeyOnline());
+        btnConvert   = UIFactory.createActionButton(I18n.get("btn.convert_iso"), Color.WHITE, Theme.ACCENT, e -> runDecrypt());
+
+        buttonBar.add(siteBtn);
+        buttonBar.add(btnGameId);
+        buttonBar.add(btnSearchDkey);
+        buttonBar.add(btnConvert);
         southArea.add(buttonBar, BorderLayout.NORTH);
 
         searchStatusLabel = new JLabel(" ", SwingConstants.CENTER);
@@ -306,18 +428,17 @@ public class MainFrame extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
-        controls.add(UIFactory.createLabel("Pasta"), gbc);
+        labelBatchFolder = UIFactory.createLabel(I18n.get("label.batch_folder"));
+        controls.add(labelBatchFolder, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        JTextField folderField = UIFactory.createTextField("Selecione ou arraste a pasta com ISOs e Chaves");
+        folderField = UIFactory.createTextField(I18n.get("placeholder.batch"));
         folderField.setEditable(false);
-        // Restore saved batch folder and auto-populate the table
         String savedBatch = AppPreferences.getBatchDir();
         if (!savedBatch.isEmpty()) {
             folderField.setText(savedBatch);
             File savedDir = new File(savedBatch);
             if (savedDir.isDirectory()) {
-                // Defer until after the panel is fully constructed
                 SwingUtilities.invokeLater(() -> scanFolderForBatch(savedDir));
             }
         }
@@ -328,10 +449,11 @@ public class MainFrame extends JFrame {
         controls.add(UIFactory.createBrowseButton(e -> chooseBatchFolder(folderField)), gbc);
 
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
-        controls.add(UIFactory.createLabel("Destino"), gbc);
+        labelBatchDest = UIFactory.createLabel(I18n.get("label.dest_folder"));
+        controls.add(labelBatchDest, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        batchOutputField = UIFactory.createTextField("Pasta de saída");
+        batchOutputField = UIFactory.createTextField(I18n.get("placeholder.dest"));
         batchOutputField.setText(AppPreferences.getOutputDir());
         controls.add(batchOutputField, gbc);
 
@@ -360,15 +482,17 @@ public class MainFrame extends JFrame {
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.CENTER));
         bottom.setOpaque(false);
-        bottom.add(UIFactory.createActionButton("Iniciar Lote", Color.WHITE, Theme.ACCENT, e -> runBatchDecrypt()));
+        btnStartBatch = UIFactory.createActionButton(I18n.get("btn.start_batch"), Color.WHITE, Theme.ACCENT, e -> runBatchDecrypt());
+        // Override the default 140px to let text breathe at any language
+        btnStartBatch.setPreferredSize(null);
+        btnStartBatch.setMargin(new Insets(0, 24, 0, 24));
+        bottom.add(btnStartBatch);
         panel.add(bottom, BorderLayout.SOUTH);
 
         return panel;
     }
 
-    // ── Drag & Drop helpers (Feature 1) ──────────────────────────────────────
-
-    /** Enables file drag onto a text field. Pass isIso=true to also persist the path. */
+    // ── Drag & Drop helpers ───────────────────────────────────────────────────
     private void enableFileDrop(JTextField field, boolean isIso) {
         new DropTarget(field, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
             @Override
@@ -406,9 +530,8 @@ public class MainFrame extends JFrame {
         }, true);
     }
 
-    /** Enables folder drag onto a text field and triggers the batch scan. */
-    private void enableFolderDrop(JTextField folderField) {
-        new DropTarget(folderField, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
+    private void enableFolderDrop(JTextField field) {
+        new DropTarget(field, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
             @Override
             public void drop(DropTargetDropEvent dtde) {
                 try {
@@ -419,7 +542,7 @@ public class MainFrame extends JFrame {
                     if (!files.isEmpty()) {
                         File f = files.get(0);
                         File folder = f.isDirectory() ? f : f.getParentFile();
-                        folderField.setText(folder.getAbsolutePath());
+                        field.setText(folder.getAbsolutePath());
                         AppPreferences.setBatchDir(folder.getAbsolutePath());
                         if (batchOutputField.getText().trim().isEmpty()) {
                             batchOutputField.setText(folder.getAbsolutePath());
@@ -450,15 +573,14 @@ public class MainFrame extends JFrame {
         };
     }
 
-    // ── File choosers ─────────────────────────────────────────────────────────
+    // ── File choosers ──────────────────────────────────────────────────────────
     private void chooseISO() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Selecione o arquivo ISO");
+        chooser.setDialogTitle(I18n.get("chooser.iso.title"));
         chooser.setCurrentDirectory(new File(AppPreferences.getIsoDir()));
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File f = chooser.getSelectedFile();
             boolean isNewIso = !f.getAbsolutePath().equals(isoField.getText().trim());
-            
             isoField.setText(f.getAbsolutePath());
             AppPreferences.setLastIsoPath(f.getAbsolutePath());
             AppPreferences.setIsoDir(f.getParent());
@@ -476,7 +598,7 @@ public class MainFrame extends JFrame {
 
     private void chooseDkey() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Selecione o arquivo .dkey / .key");
+        chooser.setDialogTitle(I18n.get("chooser.dkey.title"));
         chooser.setCurrentDirectory(new File(AppPreferences.getIsoDir()));
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File selected = chooser.getSelectedFile();
@@ -488,7 +610,7 @@ public class MainFrame extends JFrame {
     private void chooseOutput(JTextField targetField) {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setDialogTitle("Pasta de saída");
+        chooser.setDialogTitle(I18n.get("label.dest_folder"));
         chooser.setCurrentDirectory(new File(targetField.getText()));
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             String path = chooser.getSelectedFile().getAbsolutePath();
@@ -497,15 +619,15 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void chooseBatchFolder(JTextField folderField) {
+    private void chooseBatchFolder(JTextField field) {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setDialogTitle("Pasta contendo ISOs e Keys");
+        chooser.setDialogTitle(I18n.get("label.batch_folder"));
         String lastDir = AppPreferences.getBatchDir();
         chooser.setCurrentDirectory(new File(lastDir.isEmpty() ? System.getProperty("user.home") : lastDir));
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File folder = chooser.getSelectedFile();
-            folderField.setText(folder.getAbsolutePath());
+            field.setText(folder.getAbsolutePath());
             AppPreferences.setBatchDir(folder.getAbsolutePath());
             if (batchOutputField.getText().trim().isEmpty()) {
                 batchOutputField.setText(folder.getAbsolutePath());
@@ -549,10 +671,11 @@ public class MainFrame extends JFrame {
                 }
             }
 
-            String status = matchedKey != null ? "Pronto" : "Faltando Chave";
+            String status = matchedKey != null
+                    ? I18n.get("batch.status.ready")
+                    : I18n.get("batch.status.missing_key");
             BatchItem item = new BatchItem(iso, matchedKey, status);
             items.add(item);
-            
             if (matchedKey == null) {
                 missingItems.add(item);
             }
@@ -563,21 +686,32 @@ public class MainFrame extends JFrame {
 
         if (!keys.isEmpty()) {
             JComboBox<String> keyCombo = new JComboBox<>();
-            keyCombo.addItem("Selecione a chave...");
+            keyCombo.addItem(I18n.get("batch.key_select"));
             for (File k : keys) keyCombo.addItem(k.getName());
             batchTable.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(keyCombo));
         }
+
+        final String keyReady       = I18n.get("batch.status.ready");
+        final String keyReadyOnline = I18n.get("item.status.ready_online");
+        final String keyDone        = I18n.get("item.status.done");
+        final String keyProcessing  = I18n.get("batch.status.processing");
+        final String keySearching   = I18n.get("item.status.online_search");
+        final String keyMissing     = I18n.get("batch.status.missing_key");
 
         batchTable.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                     boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                String status = (String) value;
-                if (status.equals("Faltando Chave") || status.startsWith("Erro") || status.startsWith("Não achou")) c.setForeground(new Color(255, 100, 100));
-                else if (status.equals("Concluído") || status.startsWith("Pronto"))     c.setForeground(new Color(100, 255, 100));
-                else if (status.equals("Processando...") || status.startsWith("Buscando")) c.setForeground(Theme.ACCENT);
-                else                                      c.setForeground(Theme.TEXT_PRIMARY);
+                String status = value != null ? value.toString() : "";
+                if (status.equals(keyMissing) || status.startsWith(I18n.get("item.status.error")) || status.startsWith(I18n.get("item.status.not_found_online")))
+                    c.setForeground(new Color(255, 100, 100));
+                else if (status.equals(keyDone) || status.equals(keyReady) || status.equals(keyReadyOnline))
+                    c.setForeground(new Color(100, 255, 100));
+                else if (status.equals(keyProcessing) || status.contains(keySearching.substring(0, Math.min(keySearching.length(), 6))))
+                    c.setForeground(Theme.ACCENT);
+                else
+                    c.setForeground(Theme.TEXT_PRIMARY);
                 return c;
             }
         });
@@ -592,18 +726,18 @@ public class MainFrame extends JFrame {
             @Override
             protected Void doInBackground() throws Exception {
                 for (BatchItem item : missingItems) {
-                    item.setStatus("Buscando online...");
+                    item.setStatus(I18n.get("item.status.online_search"));
                     publish(item);
-                    
+
                     String titleId = findGameId(item.getIsoFile().getAbsolutePath());
                     if (titleId.isEmpty()) {
-                        item.setStatus("ID não encontrado");
+                        item.setStatus(I18n.get("item.status.not_found_online"));
                         publish(item);
                         continue;
                     }
-                    
+
                     try {
-                        com.ps3dec.model.DkeyResult res = dkeySearchService.fetchAndParseSync(titleId);
+                        DkeyResult res = dkeySearchService.fetchAndParseSync(titleId);
                         if (res != null) {
                             File tempKey = File.createTempFile(titleId + "_", ".dkey");
                             tempKey.deleteOnExit();
@@ -611,16 +745,16 @@ public class MainFrame extends JFrame {
                                 fos.write(res.getDkeyHex().getBytes(StandardCharsets.US_ASCII));
                             }
                             item.setKeyFile(tempKey);
-                            item.setStatus("Pronto (Online)");
-                            appendLog("🔑 DKEY online em lote: " + titleId + " → " + res.getDkeyHex());
+                            item.setStatus(I18n.get("item.status.ready_online"));
+                            appendLog("\uD83D\uDD11 DKEY online (batch): " + titleId + " \u2192 " + res.getDkeyHex());
                         } else {
-                            item.setStatus("Não achou online");
+                            item.setStatus(I18n.get("item.status.not_found_online"));
                         }
                     } catch (Exception e) {
-                        item.setStatus("Erro na busca");
+                        item.setStatus(I18n.get("item.status.search_error"));
                     }
                     publish(item);
-                    Thread.sleep(1000); // 1s polite delay so we don't bombard aldostools
+                    Thread.sleep(1000);
                 }
                 return null;
             }
@@ -634,47 +768,49 @@ public class MainFrame extends JFrame {
         }.execute();
     }
 
-    // ── Online DKEY search (Feature 2) ───────────────────────────────────────
+    // ── Online DKEY search ────────────────────────────────────────────────────
     private void searchDkeyOnline() {
-        // 1. Extract Game ID (try filename first, then scan ISO contents)
         String isoPath = isoField.getText().trim();
         if (isoPath.isEmpty()) {
-            setSearchStatus("Selecione um arquivo ISO primeiro.", new Color(255, 180, 80));
+            setSearchStatus(I18n.get("status.select_iso_first"), new Color(255, 180, 80));
             return;
         }
 
         String titleId = findGameId(isoPath);
         if (titleId.isEmpty()) {
-            setSearchStatus("Game ID não encontrado no nome nem no conteúdo da ISO.", new Color(255, 120, 120));
+            setSearchStatus(I18n.get("status.gameid_not_found"), new Color(255, 120, 120));
             return;
         }
 
-        // 2. Show loading indicator
-        setSearchStatus("Buscando chave para " + titleId + "…", Theme.TEXT_SECONDARY);
+        setSearchStatus(MessageFormat.format(I18n.get("status.searching_for"), titleId), Theme.TEXT_SECONDARY);
 
-        // 3. Search async
         dkeySearchService.searchAsync(titleId, new DkeySearchService.SearchCallback() {
             @Override
             public void onResult(DkeyResult result) {
                 dkeyField.setText(result.getDkeyHex());
-                AppPreferences.setLastDkeyPath(result.getDkeyHex()); // Saves the hex string to preferences
-                setSearchStatus("✔ Chave encontrada: " + result.getGameName(), new Color(100, 220, 100));
-                appendLog("🔑 DKEY online: " + result.getTitleId() + " → " + result.getDkeyHex());
+                AppPreferences.setLastDkeyPath(result.getDkeyHex());
+                setSearchStatus(
+                        MessageFormat.format(I18n.get("status.key_found"), result.getGameName()),
+                        new Color(100, 220, 100));
+                appendLog("\uD83D\uDD11 DKEY online: " + result.getTitleId() + " \u2192 " + result.getDkeyHex());
             }
 
             @Override
             public void onNotFound(String id) {
-                setSearchStatus("Chave não encontrada para " + id + ". Verifique o Game ID.", new Color(255, 150, 80));
+                setSearchStatus(
+                        MessageFormat.format(I18n.get("status.not_found_for"), id),
+                        new Color(255, 150, 80));
             }
 
             @Override
             public void onError(String errorMsg) {
-                setSearchStatus("Erro ao buscar: " + errorMsg, new Color(255, 100, 100));
+                setSearchStatus(
+                        MessageFormat.format(I18n.get("status.error_for"), errorMsg),
+                        new Color(255, 100, 100));
             }
         });
     }
 
-    /** Updates the search status label (always on EDT). */
     private void setSearchStatus(String text, Color color) {
         SwingUtilities.invokeLater(() -> {
             if (searchStatusLabel != null) {
@@ -689,23 +825,23 @@ public class MainFrame extends JFrame {
         try {
             Desktop.getDesktop().browse(new URI("https://ps3.aldostools.org/ird.html"));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erro ao abrir o navegador.");
+            JOptionPane.showMessageDialog(this, I18n.get("error.open_browser"));
         }
     }
 
     private void extractGameID() {
         String isoPath = isoField.getText().trim();
         if (isoPath.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecione uma ISO primeiro.");
+            JOptionPane.showMessageDialog(this, I18n.get("status.select_iso_first"));
             return;
         }
 
         String match = findGameId(isoPath);
 
         if (match.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Game ID não encontrado no nome nem na leitura da ISO.");
+            JOptionPane.showMessageDialog(this, I18n.get("status.gameid_not_found"));
         } else {
-            showCopyDialog("Game ID Encontrado", match);
+            showCopyDialog(I18n.get("gameid.dialog_title"), match);
         }
     }
 
@@ -717,19 +853,18 @@ public class MainFrame extends JFrame {
     private String findGameId(String filePath) {
         File f = new File(filePath);
         if (!f.exists()) return "";
-        
+
         java.util.regex.Pattern idPat = java.util.regex.Pattern.compile("([A-Z]{4})[-]?(\\d{5})");
-        
+
         // 1. Check filename
         java.util.regex.Matcher m = idPat.matcher(f.getName().toUpperCase());
-        if (m.find()) return m.group(1) + m.group(2); // return normalised (no dash)
+        if (m.find()) return m.group(1) + m.group(2);
 
         // 2. Scan internal ISO bytes (first 2MB)
         try (FileInputStream fis = new FileInputStream(f)) {
-            byte[] buffer = new byte[2 * 1024 * 1024]; // 2 MB
+            byte[] buffer = new byte[2 * 1024 * 1024];
             int read = fis.read(buffer);
             if (read > 0) {
-                // Convert to ASCII string, replacing non-printables with space to avoid regex issues
                 String content = new String(buffer, 0, read, StandardCharsets.US_ASCII);
                 m = idPat.matcher(content);
                 if (m.find()) return m.group(1) + m.group(2);
@@ -757,11 +892,11 @@ public class MainFrame extends JFrame {
 
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         panel.setOpaque(false);
-        panel.add(UIFactory.createActionButton("Copiar", Color.WHITE, Theme.ACCENT, e -> {
+        panel.add(UIFactory.createActionButton(I18n.get("btn.copy"), Color.WHITE, Theme.ACCENT, e -> {
             java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(value);
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
         }));
-        panel.add(UIFactory.createActionButton("Fechar", Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> dialog.dispose()));
+        panel.add(UIFactory.createActionButton(I18n.get("btn.close"), Theme.TEXT_SECONDARY, new Color(55, 57, 72), e -> dialog.dispose()));
 
         dialog.add(panel, BorderLayout.SOUTH);
         dialog.setLocationRelativeTo(this);
@@ -774,11 +909,10 @@ public class MainFrame extends JFrame {
         String dkeyInput = dkeyField.getText().trim();
 
         if (isoPath.isEmpty() || dkeyInput.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Preencha todos os campos!");
+            JOptionPane.showMessageDialog(this, I18n.get("error.fill_fields"));
             return;
         }
 
-        // Persist output field even if user typed it manually (Feature 3)
         String outDir = outputField.getText().trim();
         AppPreferences.setOutputDir(outDir);
 
@@ -788,20 +922,20 @@ public class MainFrame extends JFrame {
     // ── Batch decrypt ─────────────────────────────────────────────────────────
     private void runBatchDecrypt() {
         if (batchTableModel == null || batchTableModel.getItems().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum arquivo na fila!");
+            JOptionPane.showMessageDialog(this, I18n.get("error.no_queue"));
             return;
         }
 
         String outputBase = batchOutputField.getText().trim();
         List<BatchItem> pending = new ArrayList<>();
         for (BatchItem item : batchTableModel.getItems()) {
-            if (item.getKeyFile() != null && !item.getStatus().equals("Concluído")) {
+            if (item.getKeyFile() != null && !item.getStatus().equals(I18n.get("item.status.done"))) {
                 pending.add(item);
             }
         }
 
         if (pending.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Nenhum item válido para processar. Verifique as chaves pendentes.");
+            JOptionPane.showMessageDialog(this, I18n.get("batch.empty"));
             return;
         }
 
@@ -810,22 +944,23 @@ public class MainFrame extends JFrame {
 
     private void processNextBatchItem(List<BatchItem> queue, int index, String outputBase) {
         if (index >= queue.size()) {
-            String msg = queue.size() + " ISO(s) convertida(s) com sucesso!";
-            // Notifica ANTES do dialog para que apareça mesmo com app minimizado
-            notifyTray("PS3 ISO Decryptor", msg);
-            JOptionPane.showMessageDialog(this, msg, "Lote Concluído", JOptionPane.INFORMATION_MESSAGE);
+            String msg = MessageFormat.format(I18n.get("batch.done.message"), queue.size());
+            notifyTray(I18n.get("notify.title"), msg);
+            JOptionPane.showMessageDialog(this, msg, I18n.get("batch.done.title"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         BatchItem item = queue.get(index);
-        item.setStatus("Processando...");
+        item.setStatus(I18n.get("batch.status.processing"));
         batchTable.repaint();
 
         executeDecryption(item.getIsoFile().getAbsolutePath(), item.getKeyFile().getAbsolutePath(),
                 outputBase, false, new DecryptCallback() {
                     @Override
                     public void onComplete(boolean success, String errorMsg) {
-                        item.setStatus(success ? "Concluído" : "Erro: " + errorMsg);
+                        item.setStatus(success
+                                ? I18n.get("item.status.done")
+                                : I18n.get("item.status.error") + ": " + errorMsg);
                         batchTable.repaint();
                         SwingUtilities.invokeLater(() -> processNextBatchItem(queue, index + 1, outputBase));
                     }
@@ -841,16 +976,16 @@ public class MainFrame extends JFrame {
                                    boolean isSingleMode, DecryptCallback callback) {
         File isoFile = new File(isoPath);
         if (!isoFile.exists()) {
-            if (isSingleMode) JOptionPane.showMessageDialog(this, "Arquivo ISO não encontrado!");
-            if (callback != null) callback.onComplete(false, "ISO ausente");
+            if (isSingleMode) JOptionPane.showMessageDialog(this, I18n.get("error.iso_not_found"));
+            if (callback != null) callback.onComplete(false, I18n.get("error.iso_not_found"));
             return;
         }
 
         String ps3decBin = OSUtils.getPs3decPath();
         if (!new File(ps3decBin).exists()) {
-            if (isSingleMode) JOptionPane.showMessageDialog(this,
-                    "Binário ps3decrs não encontrado!\nProcurado em: " + ps3decBin);
-            if (callback != null) callback.onComplete(false, "Binário ausente");
+            String msg = MessageFormat.format(I18n.get("error.binary_missing"), ps3decBin);
+            if (isSingleMode) JOptionPane.showMessageDialog(this, msg);
+            if (callback != null) callback.onComplete(false, msg);
             return;
         }
 
@@ -865,8 +1000,9 @@ public class MainFrame extends JFrame {
                 dkeyHex = dkeyInput;
             }
         } catch (Exception e) {
-            if (isSingleMode) JOptionPane.showMessageDialog(this, "Erro ao ler a chave: " + e.getMessage());
-            if (callback != null) callback.onComplete(false, "Chave inválida");
+            String msg = MessageFormat.format(I18n.get("error.read_key"), e.getMessage());
+            if (isSingleMode) JOptionPane.showMessageDialog(this, msg);
+            if (callback != null) callback.onComplete(false, msg);
             return;
         }
 
@@ -878,11 +1014,10 @@ public class MainFrame extends JFrame {
         String stemName = isoName.contains(".") ? isoName.substring(0, isoName.lastIndexOf('.')) : isoName;
         String outputFileName = stemName + "_decrypted.iso";
 
-        // Log header (Feature 5)
-        appendLog("──────────────────────────────────────");
-        appendLog("▶ Iniciando: " + isoName);
-        appendLog("  Chave : " + dkeyInput);
-        appendLog("  Saída : " + outputDir + outputFileName);
+        appendLog("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500");
+        appendLog("\u25B6 " + I18n.get("dialog.progress.starting") + " " + isoName);
+        appendLog("  Key  : " + dkeyInput);
+        appendLog("  Out  : " + outputDir + outputFileName);
 
         ProgressDialog progressDialog = new ProgressDialog(this, isoName, totalSize, () -> decryptService.cancel());
 
@@ -895,10 +1030,9 @@ public class MainFrame extends JFrame {
 
                     @Override
                     public void onSuccess(String outputFilePath) {
-                        appendLog("✔ Concluído: " + outputFilePath);
+                        appendLog("\u2714 " + I18n.get("item.status.done") + ": " + outputFilePath);
                         if (isSingleMode) {
-                            // Notifica ANTES de mostrar o dialog para disparar mesmo com app minimizado
-                            notifyTray("PS3 ISO Decryptor", isoName + " convertida com sucesso!");
+                            notifyTray(I18n.get("notify.title"), isoName + " " + I18n.get("notify.done_iso"));
                             progressDialog.finishWithAnimation(() ->
                                     new SuccessDialog(MainFrame.this, outputFilePath).setVisible(true)
                             );
@@ -912,7 +1046,7 @@ public class MainFrame extends JFrame {
 
                     @Override
                     public void onError(String errorMsg) {
-                        appendLog("✖ Erro: " + errorMsg);
+                        appendLog("\u2716 " + I18n.get("item.status.error") + ": " + errorMsg);
                         progressDialog.dispose();
                         if (isSingleMode) JOptionPane.showMessageDialog(MainFrame.this, errorMsg);
                         if (callback != null) callback.onComplete(false, errorMsg);
@@ -921,7 +1055,6 @@ public class MainFrame extends JFrame {
                     @Override
                     public void onFinish() { /* handled above */ }
                 },
-                // Feature 5 — log consumer
                 line -> appendLog("  " + line));
 
         progressDialog.setVisible(true);

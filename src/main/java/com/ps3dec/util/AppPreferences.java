@@ -19,6 +19,16 @@ public class AppPreferences {
     private static final String KEY_BATCH_DIR    = "batchDir";
     private static final String KEY_LAST_ISO     = "lastIsoPath";
     private static final String KEY_LAST_DKEY    = "lastDkeyPath";
+    private static final String KEY_INITIALIZED  = "initialized";
+    private static final String KEY_LANGUAGE     = "language";
+
+    static {
+        // Garantir que o app comece "zerado" na primeira vez que for aberto em uma máquina nova.
+        if (!PREFS.getBoolean(KEY_INITIALIZED, false)) {
+            clear();
+            PREFS.putBoolean(KEY_INITIALIZED, true);
+        }
+    }
 
     private AppPreferences() { /* classe utilitária, sem instância */ }
 
@@ -60,5 +70,20 @@ public class AppPreferences {
     }
     public static void setLastDkeyPath(String path) {
         if (path != null && !path.trim().isEmpty()) PREFS.put(KEY_LAST_DKEY, path);
+    }
+
+    // ── Idioma escolhido pelo usuário (BCP-47 tag, ex: "pt-BR", "en") ────────
+    public static String getLanguage() {
+        return PREFS.get(KEY_LANGUAGE, "");   // "" = usar locale do sistema na primeira vez
+    }
+    public static void setLanguage(String languageTag) {
+        if (languageTag != null) PREFS.put(KEY_LANGUAGE, languageTag);
+    }
+
+    public static void clear() {
+        try {
+            PREFS.clear();
+            PREFS.flush();
+        } catch (Exception ignored) {}
     }
 }

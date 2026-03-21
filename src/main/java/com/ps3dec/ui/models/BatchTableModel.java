@@ -1,11 +1,11 @@
 package com.ps3dec.ui.models;
 
+import com.ps3dec.util.I18n;
 import javax.swing.table.AbstractTableModel;
 import java.io.File;
 import java.util.List;
 
 public class BatchTableModel extends AbstractTableModel {
-    private final String[] columnNames = {"Arquivo ISO", "Chave (.key / .dkey)", "Status"};
     private final List<BatchItem> items;
     private final List<File> allKeys;
 
@@ -18,10 +18,17 @@ public class BatchTableModel extends AbstractTableModel {
     public int getRowCount() { return items.size(); }
 
     @Override
-    public int getColumnCount() { return columnNames.length; }
+    public int getColumnCount() { return 3; }
 
     @Override
-    public String getColumnName(int column) { return columnNames[column]; }
+    public String getColumnName(int column) {
+        switch (column) {
+            case 0: return I18n.get("table.col.file");
+            case 1: return I18n.get("label.dkey");
+            case 2: return I18n.get("table.col.status");
+            default: return "";
+        }
+    }
 
     @Override
     public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -33,8 +40,8 @@ public class BatchTableModel extends AbstractTableModel {
         BatchItem item = items.get(rowIndex);
         switch (columnIndex) {
             case 0: return item.getIsoFile().getName();
-            case 1: return item.getKeyFile() != null ? item.getKeyFile().getName() : "Selecione a chave...";
-            case 2: return item.getStatus();
+            case 1: return item.getKeyFile() != null ? item.getKeyFile().getName() : "...";
+            case 2: return item.getStatusText(); 
             default: return null;
         }
     }
@@ -56,12 +63,12 @@ public class BatchTableModel extends AbstractTableModel {
 
     public void updateRowStatus(int rowIndex) {
         BatchItem item = items.get(rowIndex);
-        if (item.getStatus().equals("Processando...") || item.getStatus().equals("Concluído") || item.getStatus().startsWith("Erro")) return;
+        if (item.getStatus().equals("DONE") || item.getStatus().equals("ERROR")) return;
         
         if (item.getKeyFile() == null) {
-            item.setStatus("Faltando Chave");
+            item.setStatus("PENDING");
         } else {
-            item.setStatus("Pronto");
+            item.setStatus("READY");
         }
         fireTableCellUpdated(rowIndex, 2);
     }

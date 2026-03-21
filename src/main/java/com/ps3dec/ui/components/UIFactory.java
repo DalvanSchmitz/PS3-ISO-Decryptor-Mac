@@ -22,30 +22,33 @@ public class UIFactory {
 
     /**
      * Creates a styled text field with a custom painted placeholder.
-     * The placeholder is shown in grey italic when the field is empty and unfocused,
-     * behaving like a browser input placeholder — works on all OS/L&F.
+     * The placeholder is stored in the ClientProperty "placeholder" so it can be
+     * updated at runtime (e.g., on language switch) via field.putClientProperty("placeholder", newText).
      */
     public static JTextField createTextField(String placeholder) {
         JTextField field = new JTextField() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                // Draw placeholder only when empty and not focused
-                if (getText().isEmpty() && !isFocusOwner() && placeholder != null && !placeholder.isEmpty()) {
+                // Read current placeholder from client property so it survives language changes
+                Object prop = getClientProperty("placeholder");
+                String ph = (prop instanceof String) ? (String) prop : null;
+                if (getText().isEmpty() && !isFocusOwner() && ph != null && !ph.isEmpty()) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                             RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                    // ~40% opacity grey — same feel as HTML placeholder
                     g2.setColor(new Color(150, 152, 170));
                     g2.setFont(getFont().deriveFont(Font.ITALIC));
                     FontMetrics fm = g2.getFontMetrics();
                     Insets ins = getInsets();
                     int y = ins.top + (getHeight() - ins.top - ins.bottom - fm.getHeight()) / 2 + fm.getAscent();
-                    g2.drawString(placeholder, ins.left + 4, y);
+                    g2.drawString(ph, ins.left + 4, y);
                     g2.dispose();
                 }
             }
         };
+        // Seed the client property with the initial value
+        field.putClientProperty("placeholder", placeholder);
         field.setPreferredSize(new Dimension(0, 40));
         field.setFont(new Font(Font.DIALOG, Font.PLAIN, 14));
         field.setBackground(Theme.BG_FIELD);
