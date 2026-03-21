@@ -16,7 +16,18 @@ Uma GUI elegante e profissional em Java Swing para descriptografar arquivos de j
 - Instalação [Maven](https://maven.apache.org/) (opcional, mas recomendado)
 - A ferramenta CLI original `ps3decrs` copilada para sua plataforma nativa.
 
-## Como Compilar e Rodar
+## 🚀 Download Direto (Executável)
+
+Se você não quiser compilar o código fonte do zero, pode baixar o programa pronto para uso:
+1. **[Baixar PS3-ISO-Decryptor.jar](https://github.com/DalvanSchmitz/PS3-ISO-Decryptor-Mac/raw/master/release/PS3-ISO-Decryptor.jar)**
+2. Certifique-se de ter a ferramenta nativa `ps3decrs` na mesma pasta do `.jar`. (Baixe a versão para o seu sistema operacional Mac/Windows/Linux no [repositório original](https://github.com/al3xtjames/ps3dec/releases)).
+
+Para abrir o programa, basta dar um duplo-clique no arquivo `.jar` baixado, ou via terminal:
+```bash
+java -jar PS3-ISO-Decryptor.jar
+```
+
+## 💻 Como Compilar e Rodar (Para Desenvolvedores)
 
 1. **Baixar o código**
    ```bash
