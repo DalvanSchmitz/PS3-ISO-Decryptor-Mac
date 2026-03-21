@@ -17,7 +17,7 @@ public class SuccessDialog extends JDialog {
         ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(24, 28, 20, 28));
 
         JLabel icon = new JLabel("Conversão finalizada com sucesso!", SwingConstants.CENTER);
-        icon.setFont(new Font("SansSerif", Font.BOLD, 16));
+        icon.setFont(new Font(Font.DIALOG, Font.BOLD, 16));
         icon.setForeground(Theme.ACCENT_GREEN);
         add(icon, BorderLayout.NORTH);
 

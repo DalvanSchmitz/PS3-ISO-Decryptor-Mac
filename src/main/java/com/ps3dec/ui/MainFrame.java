@@ -122,7 +122,7 @@ public class MainFrame extends JFrame {
         header.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
 
         JLabel titleLabel = new JLabel("PS3 ISO Decryptor", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
+        titleLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 22));
         titleLabel.setForeground(Theme.TEXT_PRIMARY);
         header.add(titleLabel, BorderLayout.NORTH);
 
@@ -286,7 +286,7 @@ public class MainFrame extends JFrame {
         southArea.add(buttonBar, BorderLayout.NORTH);
 
         searchStatusLabel = new JLabel(" ", SwingConstants.CENTER);
-        searchStatusLabel.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        searchStatusLabel.setFont(new Font(Font.DIALOG, Font.ITALIC, 12));
         searchStatusLabel.setForeground(Theme.TEXT_SECONDARY);
         southArea.add(searchStatusLabel, BorderLayout.CENTER);
 
@@ -347,7 +347,7 @@ public class MainFrame extends JFrame {
         batchTable.setForeground(Theme.TEXT_PRIMARY);
         batchTable.getTableHeader().setBackground(new Color(55, 57, 72));
         batchTable.getTableHeader().setForeground(Theme.TEXT_PRIMARY);
-        batchTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        batchTable.getTableHeader().setFont(new Font(Font.DIALOG, Font.BOLD, 12));
 
         batchTableModel = new BatchTableModel(new ArrayList<>(), new ArrayList<>());
         batchTable.setModel(batchTableModel);

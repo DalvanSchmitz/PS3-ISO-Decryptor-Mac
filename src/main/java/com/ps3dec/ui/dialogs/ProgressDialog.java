@@ -30,12 +30,12 @@ public class ProgressDialog extends JDialog {
         topPanel.setOpaque(false);
 
         JLabel fileLabel = new JLabel(isoName);
-        fileLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
+        fileLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 15));
         fileLabel.setForeground(Theme.TEXT_PRIMARY);
         topPanel.add(fileLabel, BorderLayout.NORTH);
 
         JLabel sizeLabel = new JLabel("Tamanho: " + FormatUtils.formatSize(totalSize));
-        sizeLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        sizeLabel.setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
         sizeLabel.setForeground(Theme.TEXT_SECONDARY);
         topPanel.add(sizeLabel, BorderLayout.SOUTH);
 
@@ -50,7 +50,7 @@ public class ProgressDialog extends JDialog {
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
         progressBar.setString("Iniciando...");
-        progressBar.setFont(new Font("SansSerif", Font.BOLD, 12));
+        progressBar.setFont(new Font(Font.DIALOG, Font.BOLD, 12));
         progressBar.setForeground(Theme.ACCENT);
         progressBar.setBackground(Theme.BG_FIELD);
         progressBar.setBorder(BorderFactory.createCompoundBorder(
@@ -159,7 +159,7 @@ public class ProgressDialog extends JDialog {
 
     private JLabel createStatLabel(String title, String value) {
         JLabel label = new JLabel(statHtml(title, value), SwingConstants.CENTER);
-        label.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        label.setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
         return label;
     }
 }

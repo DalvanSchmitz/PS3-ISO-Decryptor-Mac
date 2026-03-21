@@ -14,7 +14,7 @@ public class UIFactory {
 
     public static JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("SansSerif", Font.BOLD, 13));
+        label.setFont(new Font(Font.DIALOG, Font.BOLD, 13));
         label.setForeground(Theme.TEXT_SECONDARY);
         label.setPreferredSize(new Dimension(80, 40));
         return label;
@@ -47,7 +47,7 @@ public class UIFactory {
             }
         };
         field.setPreferredSize(new Dimension(0, 40));
-        field.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        field.setFont(new Font(Font.DIALOG, Font.PLAIN, 14));
         field.setBackground(Theme.BG_FIELD);
         field.setForeground(Theme.TEXT_PRIMARY);
         field.setCaretColor(Color.WHITE);
@@ -81,7 +81,7 @@ public class UIFactory {
                 g2.dispose();
             }
         };
-        btn.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btn.setFont(new Font(Font.DIALOG, Font.BOLD, 13));
         btn.setBackground(bg);
         btn.setForeground(fg);
         btn.setContentAreaFilled(false);
