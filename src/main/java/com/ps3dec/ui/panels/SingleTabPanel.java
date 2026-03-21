@@ -226,8 +226,16 @@ public class SingleTabPanel extends JPanel {
                 }
                 @Override
                 public void onSuccess(String outputFilePath) {
+                    ((com.ps3dec.ui.MainFrame) parent).getTrayManager().showNotification(
+                        com.ps3dec.util.I18n.get("notify.title"),
+                        com.ps3dec.util.I18n.get("notify.done_iso")
+                    );
                     logPanel.log("\u2714 " + I18n.get("item.status.done") + ": " + outputFilePath);
-                    progress.finishWithAnimation(() -> new SuccessDialog(parent, outputFilePath).setVisible(true));
+                    progress.finishWithAnimation(() -> {
+                        SwingUtilities.invokeLater(() -> {
+                            new SuccessDialog(parent, outputFilePath).setVisible(true);
+                        });
+                    });
                 }
                 @Override
                 public void onError(String errorMsg) {

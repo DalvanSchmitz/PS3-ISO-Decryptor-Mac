@@ -57,8 +57,10 @@ public class ProgressDialog extends JDialog {
         progressBar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Theme.BORDER_COLOR, 1, true),
                 BorderFactory.createEmptyBorder(2, 2, 2, 2)));
-        progressBar.setPreferredSize(new Dimension(480, 30));
-        progressBar.setMaximumSize(new Dimension(Short.MAX_VALUE, 30));
+        progressBar.setPreferredSize(new Dimension(480, 34));
+        progressBar.setMaximumSize(new Dimension(Short.MAX_VALUE, 34));
+        progressBar.putClientProperty("ProgressBar.selectionForeground", Color.WHITE);
+        progressBar.putClientProperty("ProgressBar.selectionBackground", Color.WHITE);
         progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(progressBar);
 
@@ -122,7 +124,11 @@ public class ProgressDialog extends JDialog {
             int value = startVal + (int) ((targetVal - startVal) * eased);
 
             progressBar.setValue(value);
-            progressBar.setString(String.format("%.1f%%", value / 10.0));
+            if (t >= 1.0) {
+                progressBar.setString("100%");
+            } else {
+                progressBar.setString(String.format("%.1f%%", value / 10.0));
+            }
 
             // Transição de cor: ACCENT → GREEN
             int r = (int) (Theme.ACCENT.getRed() + (Theme.ACCENT_GREEN.getRed() - Theme.ACCENT.getRed()) * eased);

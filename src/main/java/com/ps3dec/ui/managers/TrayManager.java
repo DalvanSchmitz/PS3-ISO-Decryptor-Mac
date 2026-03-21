@@ -26,7 +26,7 @@ public class TrayManager {
 
         try {
             SystemTray tray = SystemTray.getSystemTray();
-            Image icon = Toolkit.getDefaultToolkit().getImage(getClass().getResource("/assets/AppIcon.png"));
+            Image icon = Toolkit.getDefaultToolkit().getImage(getClass().getResource("/AppIcon.png"));
             
             trayIcon = new TrayIcon(icon, "PS3 ISO Decryptor");
             trayIcon.setImageAutoSize(true);
@@ -61,6 +61,27 @@ public class TrayManager {
         popup.add(exitItem);
         
         trayIcon.setPopupMenu(popup);
+    }
+
+    public void showNotification(String title, String message) {
+        if (System.getProperty("os.name", "").toLowerCase().contains("mac")) {
+            try {
+                String safeMsg = message.replace("\"", "'");
+                String safeTitle = title.replace("\"", "'");
+                String[] cmd = {
+                    "osascript", "-e",
+                    "display notification \"" + safeMsg + "\" with title \"" + safeTitle + "\""
+                };
+                Runtime.getRuntime().exec(cmd);
+                return;
+            } catch (Exception e) {
+                System.err.println("Failed to show macOS notification: " + e.getMessage());
+            }
+        }
+        
+        if (trayIcon != null) {
+            trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);
+        }
     }
 
     public void updateLocalizedText() {

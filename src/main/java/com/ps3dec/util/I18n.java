@@ -12,9 +12,9 @@ public class I18n {
     private static ResourceBundle bundle;
 
     static {
-        // Carrega o idioma salvo pelo usuário; se não houver, usa o Locale do sistema
+        // Carrega o idioma salvo pelo usuário; se não houver, usa Português como padrão
         String savedTag = AppPreferences.getLanguage();
-        Locale locale = savedTag.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(savedTag);
+        Locale locale = savedTag.isEmpty() ? new Locale("pt", "BR") : Locale.forLanguageTag(savedTag);
         loadBundle(locale);
     }
 

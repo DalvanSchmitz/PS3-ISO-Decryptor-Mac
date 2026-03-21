@@ -11,10 +11,13 @@ import javax.swing.UIManager;
 public class Main {
 
     public static void main(String[] args) {
-        // Fix for macOS character dropping/breaking
-        System.setProperty("apple.awt.antialiasing", "on");
-        System.setProperty("apple.awt.textantialiasing", "on");
-        System.setProperty("file.encoding", "UTF-8");
+        // Set locale before anything else
+        String savedTag = com.ps3dec.util.AppPreferences.getLanguage();
+        if (!savedTag.isEmpty()) {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag(savedTag));
+        } else {
+            java.util.Locale.setDefault(new java.util.Locale("pt", "BR"));
+        }
 
         // Handle --clear command to reset preferences logic
         if (args.length > 0 && args[0].equals("--clear")) {
@@ -22,13 +25,16 @@ public class Main {
             System.out.println("Preferências limpas com sucesso.");
         }
 
+        System.setProperty("apple.awt.antialiasing", "on");
+        System.setProperty("apple.awt.textantialiasing", "on");
+        System.setProperty("file.encoding", "UTF-8");
+        System.setProperty("apple.awt.application.name", "PS3 ISO Decryptor");
+        System.setProperty("com.apple.mrj.application.apple.menu.about.name", "PS3 ISO Decryptor");
+        System.setProperty("apple.laf.useScreenMenuBar", "true");
+
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
-            try {
-                UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            } catch (Exception ignored2) {}
-        }
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> {
             MainFrame mainFrame = new MainFrame();

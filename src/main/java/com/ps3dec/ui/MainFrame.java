@@ -32,6 +32,7 @@ public class MainFrame extends JFrame {
     private TrayManager trayManager;
 
     public MainFrame() {
+        setName("PS3 ISO Decryptor");
         setTitle("PS3 ISO Decryptor");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 720);
@@ -258,5 +259,9 @@ public class MainFrame extends JFrame {
 
         revalidate();
         repaint();
+    }
+
+    public TrayManager getTrayManager() {
+        return trayManager;
     }
 }

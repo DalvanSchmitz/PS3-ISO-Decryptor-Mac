@@ -301,6 +301,10 @@ public class BatchTabPanel extends JPanel {
     private void processNextBatchItem(List<BatchItem> queue, int index, String outputBase) {
         if (index >= queue.size()) {
             logPanel.log("\u2714 " + I18n.get("batch.status.done"));
+            ((com.ps3dec.ui.MainFrame) parent).getTrayManager().showNotification(
+                com.ps3dec.util.I18n.get("notify.title"),
+                com.ps3dec.util.I18n.get("notify.done_batch")
+            );
             return;
         }
 
