@@ -139,13 +139,13 @@ public class DecryptService {
         if (filePath == null || filePath.isEmpty()) return "";
         
         File f = new File(filePath);
-        if (!f.exists()) return "";
-
         java.util.regex.Pattern idPat = java.util.regex.Pattern.compile("([A-Z]{4})[- ]?(\\d{5})");
 
-        // 1. Check filename
+        // 1. Check filename (even if file doesn't exist on disk, we can try to parse the path string)
         java.util.regex.Matcher m = idPat.matcher(f.getName().toUpperCase());
         if (m.find()) return m.group(1) + m.group(2);
+
+        if (!f.exists()) return "";
 
         // 2. Scan internal ISO bytes (first 2MB)
         try (FileInputStream fis = new FileInputStream(f)) {

@@ -43,6 +43,15 @@ public class SingleTabPanel extends JPanel {
         setLayout(new BorderLayout(0, 15));
         initComponents();
         setupDragAndDrop();
+
+        // Auto-search on startup if ISO is present but DKEY is missing
+        String iso = isoField.getText().trim();
+        String dkey = dkeyField.getText().trim();
+        if (!iso.isEmpty() && dkey.isEmpty()) {
+            Timer t = new Timer(100, e -> searchDkeyOnline());
+            t.setRepeats(false);
+            t.start();
+        }
     }
 
     private void initComponents() {
@@ -187,6 +196,7 @@ public class SingleTabPanel extends JPanel {
             @Override
             public void onResult(DkeyResult result) {
                 dkeyField.setText(result.getDkeyHex());
+                AppPreferences.setLastDkeyPath(result.getDkeyHex());
                 setSearchStatus(MessageFormat.format(I18n.get("status.key_found"), result.getGameName()), new Color(100, 220, 100));
                 logPanel.log("\uD83D\uDD11 DKEY online: " + result.getTitleId() + " \u2192 " + result.getDkeyHex());
             }
