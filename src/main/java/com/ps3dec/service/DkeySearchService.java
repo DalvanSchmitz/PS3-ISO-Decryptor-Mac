@@ -1,6 +1,8 @@
 package com.ps3dec.service;
 
 import com.ps3dec.model.DkeyResult;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.net.ssl.*;
 import javax.swing.SwingWorker;
@@ -29,12 +31,10 @@ public class DkeySearchService {
     private static final String DKEY_URL = "https://ps3.aldostools.org/dkey.html";
     private static final int    TIMEOUT_MS = 20_000;
     private static final long   CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-
-    private static String lastHtmlContent = null;
-    private static long   lastFetchTime = 0;
-
-    // DKEY hex: exactly 32 hex characters (16-byte PS3 disc key)
     private static final Pattern HEX32 = Pattern.compile("^[0-9A-Fa-f]{32}$");
+
+    private static Map<String, DkeyResult> dkeyCache = null;
+    private static long lastFetchTime = 0;
 
     // ── Public callback interface ─────────────────────────────────────────────
 
@@ -58,12 +58,10 @@ public class DkeySearchService {
      */
     public void searchAsync(String titleId, SearchCallback callback) {
         new SwingWorker<DkeyResult, Void>() {
-
             @Override
             protected DkeyResult doInBackground() throws Exception {
                 return fetchAndParseSync(titleId.toUpperCase().trim());
             }
-
             @Override
             protected void done() {
                 try {
@@ -78,9 +76,14 @@ public class DkeySearchService {
         }.execute();
     }
 
-    // ── HTTP fetch ────────────────────────────────────────────────────────────
-
     public DkeyResult fetchAndParseSync(String titleId) throws Exception {
+        String tid = titleId.toUpperCase().trim();
+        
+        long now = System.currentTimeMillis();
+        if (dkeyCache != null && (now - lastFetchTime) < CACHE_EXPIRY_MS) {
+            return dkeyCache.get(tid);
+        }
+
         trustAllCerts();
 
         URL url = new URL(DKEY_URL);
@@ -88,80 +91,61 @@ public class DkeySearchService {
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(TIMEOUT_MS);
         conn.setReadTimeout(TIMEOUT_MS);
-        // Mimic a browser so the server doesn't reject us
-        conn.setRequestProperty("User-Agent",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
-        conn.setRequestProperty("Accept", "text/html,*/*");
-
-        long now = System.currentTimeMillis();
-        if (lastHtmlContent != null && (now - lastFetchTime) < CACHE_EXPIRY_MS) {
-            return parseHtml(lastHtmlContent, titleId);
-        }
-
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
+        
         int status = conn.getResponseCode();
-        if (status < 200 || status >= 300) {
-            throw new Exception("HTTP " + status);
-        }
+        if (status < 200 || status >= 300) throw new Exception("HTTP " + status);
 
-        StringBuilder html = new StringBuilder(900_000);
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
+        StringBuilder html = new StringBuilder(1000_000);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 html.append(line).append('\n');
             }
         }
 
-        lastHtmlContent = html.toString();
+        // Parse entire HTML into memory map
+        Map<String, DkeyResult> newCache = parseFullHtml(html.toString());
+        dkeyCache = newCache;
         lastFetchTime = System.currentTimeMillis();
 
-        return parseHtml(lastHtmlContent, titleId);
+        return dkeyCache.get(tid);
     }
 
-    // ── HTML parsing ──────────────────────────────────────────────────────────
-
-    /**
-     * Scans the HTML for a {@code <tr>} row containing {@code titleId}
-     * and returns the DKEY from column index 5, or null if not found.
-     */
-    private DkeyResult parseHtml(String html, String titleId) {
-        // Each table row: <tr ...> ... </tr>
-        Pattern rowPat = Pattern.compile("<tr[^>]*>(.*?)</tr>",
-                Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
+    private Map<String, DkeyResult> parseFullHtml(String html) {
+        Map<String, DkeyResult> map = new HashMap<>();
+        Pattern rowPat = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
         Matcher rowMatcher = rowPat.matcher(html);
 
         while (rowMatcher.find()) {
             String row = rowMatcher.group(1);
-            if (!row.toUpperCase().contains(titleId)) continue;
-
             List<String> cells = extractCells(row);
+            if (cells.size() < 6) continue;
 
-            // Find the cell that is exactly the title ID we want
-            boolean titleFound = false;
+            // Typically: [Game Title, Region, Game ID, MD5, DKEY, ...]
+            // Let's find exactly which cell is the TitleID (e.g. BLES01234) and which is the DKEY (32 hex)
+            String foundTitleId = null;
+            String foundDkey = null;
+            String foundGameName = "";
+
             for (String cell : cells) {
-                if (cell.equalsIgnoreCase(titleId)) { titleFound = true; break; }
-            }
-            if (!titleFound) continue;
-
-            // The DKEY hex must be exactly 32 hex chars. The table has MD5 (col 4) and DKEY (col 5).
-            // We search from the end to ensure we grab the DKEY, not the MD5 hash.
-            for (int i = cells.size() - 1; i >= 0; i--) {
-                String stripped = cells.get(i).trim();
-                if (HEX32.matcher(stripped).matches()) {
-                    // Extract game name: first non-empty cell that is NOT the titleId and NOT hex
-                    String gameName = "";
-                    for (String c : cells) {
-                        String s = c.trim();
-                        if (!s.isEmpty() && !s.equalsIgnoreCase(titleId)
-                                && !HEX32.matcher(s).matches()) {
-                            gameName = s; break;
-                        }
-                    }
-                    return new DkeyResult(titleId, gameName, stripped);
+                String s = cell.trim();
+                if (s.isEmpty()) continue;
+                
+                if (s.length() == 9 && (s.startsWith("B") || s.startsWith("N") || s.startsWith("M"))) {
+                    foundTitleId = s.toUpperCase();
+                } else if (HEX32.matcher(s).matches()) {
+                    foundDkey = s;
+                } else if (foundGameName.isEmpty()) {
+                    foundGameName = s;
                 }
             }
+
+            if (foundTitleId != null && foundDkey != null) {
+                map.put(foundTitleId, new DkeyResult(foundTitleId, foundGameName, foundDkey));
+            }
         }
-        return null; // not found
+        return map;
     }
 
     /** Extracts inner text from each {@code <td>} in a row, stripping HTML tags. */

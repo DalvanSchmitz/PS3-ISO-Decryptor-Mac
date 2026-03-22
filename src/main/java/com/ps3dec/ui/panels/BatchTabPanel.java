@@ -194,6 +194,11 @@ public class BatchTabPanel extends JPanel {
 
             if (existing != null) {
                 newItems.add(existing);
+                // retry if not found or error
+                if (existing.getKeyFile() == null && 
+                   ("NOT_FOUND".equals(existing.getStatus()) || "SEARCH_ERROR".equals(existing.getStatus()))) {
+                    missingKeys.add(existing);
+                }
             } else {
                 String isoName = iso.getName();
                 String isoBase = isoName.substring(0, isoName.lastIndexOf('.'));
