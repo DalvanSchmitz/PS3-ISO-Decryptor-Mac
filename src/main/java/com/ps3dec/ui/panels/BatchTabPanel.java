@@ -37,7 +37,7 @@ public class BatchTabPanel extends JPanel {
     private JTextField folderField, batchOutputField;
     private JTable batchTable;
     private BatchTableModel batchTableModel;
-    private JButton btnStartBatch;
+    private JButton btnStartBatch, btnRefreshBatch;
 
     public BatchTabPanel(JFrame parent, LogPanel logPanel) {
         this.parent = parent;
@@ -88,6 +88,12 @@ public class BatchTabPanel extends JPanel {
                 scanFolderForBatch(folder);
             }
         }), gbc);
+        
+        gbc.gridx = 3; gbc.weightx = 0;
+        btnRefreshBatch = UIFactory.createBrowseButton(e -> refreshBatchItems());
+        btnRefreshBatch.setText(I18n.get("btn.refresh"));
+        btnRefreshBatch.setToolTipText(I18n.get("btn.refresh"));
+        controls.add(btnRefreshBatch, gbc);
 
         // Destination Folder
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
@@ -151,53 +157,67 @@ public class BatchTabPanel extends JPanel {
     }
 
     private void scanFolderForBatch(File folder) {
+        refreshBatchItems();
+    }
+
+    private void refreshBatchItems() {
+        String path = folderField.getText();
+        if (path.isEmpty() || I18n.get("placeholder.batch").equals(path)) return;
+        File folder = new File(path);
+        if (!folder.isDirectory()) return;
+
         File[] files = folder.listFiles();
         if (files == null) return;
 
         List<File> isos = new ArrayList<>();
         List<File> keys = new ArrayList<>();
-
         for (File f : files) {
             if (f.isFile()) {
                 String name = f.getName().toLowerCase();
-                if (name.endsWith(".iso")) {
-                    isos.add(f);
-                } else if (name.endsWith(".key") || name.endsWith(".dkey") || name.endsWith(".rap")) {
-                    keys.add(f);
-                }
+                if (name.endsWith(".iso")) isos.add(f);
+                else if (name.endsWith(".key") || name.endsWith(".dkey") || name.endsWith(".rap")) keys.add(f);
             }
         }
 
-        List<BatchItem> items = new ArrayList<>();
-        List<BatchItem> missingItems = new ArrayList<>();
-        for (File iso : isos) {
-            String isoName = iso.getName();
-            String isoBase = isoName.substring(0, isoName.lastIndexOf('.'));
+        List<BatchItem> currentItems = batchTableModel != null ? batchTableModel.getItems() : new ArrayList<>();
+        List<BatchItem> newItems = new ArrayList<>();
+        List<BatchItem> missingKeys = new ArrayList<>();
 
-            File matchedKey = null;
-            for (File key : keys) {
-                String keyName = key.getName();
-                String keyBase = keyName.contains(".") ? keyName.substring(0, keyName.lastIndexOf('.')) : keyName;
-                if (keyBase.equalsIgnoreCase(isoBase)) {
-                    matchedKey = key;
+        for (File iso : isos) {
+            BatchItem existing = null;
+            for (BatchItem ci : currentItems) {
+                if (ci.getIsoFile().equals(iso)) {
+                    existing = ci;
                     break;
                 }
             }
 
-            String status = matchedKey != null ? "READY" : "PENDING";
-            BatchItem item = new BatchItem(iso, matchedKey, status);
-            items.add(item);
-            if (matchedKey == null) {
-                missingItems.add(item);
+            if (existing != null) {
+                newItems.add(existing);
+            } else {
+                String isoName = iso.getName();
+                String isoBase = isoName.substring(0, isoName.lastIndexOf('.'));
+                File matchedKey = null;
+                for (File key : keys) {
+                    String keyName = key.getName();
+                    String keyBase = keyName.contains(".") ? keyName.substring(0, keyName.lastIndexOf('.')) : keyName;
+                    if (keyBase.equalsIgnoreCase(isoBase)) {
+                        matchedKey = key;
+                        break;
+                    }
+                }
+                BatchItem item = new BatchItem(iso, matchedKey, matchedKey != null ? "READY" : "PENDING");
+                newItems.add(item);
+                if (matchedKey == null) missingKeys.add(item);
             }
         }
 
-        batchTableModel = new BatchTableModel(items, keys);
+        batchTableModel = new BatchTableModel(newItems, keys);
         batchTable.setModel(batchTableModel);
         setupTableRenderers(keys);
 
-        if (!missingItems.isEmpty()) {
-            searchMissingKeysOnline(missingItems);
+        if (!missingKeys.isEmpty()) {
+            searchMissingKeysOnline(missingKeys);
         }
     }
 
@@ -355,6 +375,7 @@ public class BatchTabPanel extends JPanel {
         if (labelBatchFolder != null) labelBatchFolder.setText(I18n.get("label.batch_folder"));
         if (labelBatchDest != null) labelBatchDest.setText(I18n.get("label.dest_folder"));
         if (btnStartBatch != null) btnStartBatch.setText(I18n.get("btn.start_batch"));
+        if (btnRefreshBatch != null) btnRefreshBatch.setText(I18n.get("btn.refresh"));
 
         UIUtils.setPlaceholder(folderField, I18n.get("placeholder.batch"));
         UIUtils.setPlaceholder(batchOutputField, I18n.get("placeholder.dest"));
