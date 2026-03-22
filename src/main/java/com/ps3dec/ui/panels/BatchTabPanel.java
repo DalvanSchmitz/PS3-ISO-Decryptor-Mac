@@ -286,8 +286,9 @@ public class BatchTabPanel extends JPanel {
                     } catch (Exception e) {
                         item.setStatus("SEARCH_ERROR");
                     }
-                    publish(item);
-                    Thread.sleep(1000);
+                    try {
+                        Thread.sleep(100); // Small delay, no longer hitting server for every item
+                    } catch (InterruptedException ignored) {}
                 }
                 return null;
             }

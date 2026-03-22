@@ -28,6 +28,10 @@ public class DkeySearchService {
 
     private static final String DKEY_URL = "https://ps3.aldostools.org/dkey.html";
     private static final int    TIMEOUT_MS = 20_000;
+    private static final long   CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+    private static String lastHtmlContent = null;
+    private static long   lastFetchTime = 0;
 
     // DKEY hex: exactly 32 hex characters (16-byte PS3 disc key)
     private static final Pattern HEX32 = Pattern.compile("^[0-9A-Fa-f]{32}$");
@@ -89,6 +93,11 @@ public class DkeySearchService {
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
         conn.setRequestProperty("Accept", "text/html,*/*");
 
+        long now = System.currentTimeMillis();
+        if (lastHtmlContent != null && (now - lastFetchTime) < CACHE_EXPIRY_MS) {
+            return parseHtml(lastHtmlContent, titleId);
+        }
+
         int status = conn.getResponseCode();
         if (status < 200 || status >= 300) {
             throw new Exception("HTTP " + status);
@@ -103,7 +112,10 @@ public class DkeySearchService {
             }
         }
 
-        return parseHtml(html.toString(), titleId);
+        lastHtmlContent = html.toString();
+        lastFetchTime = System.currentTimeMillis();
+
+        return parseHtml(lastHtmlContent, titleId);
     }
 
     // ── HTML parsing ──────────────────────────────────────────────────────────
